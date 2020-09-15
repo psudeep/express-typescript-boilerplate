@@ -1,4 +1,4 @@
-# Express Typescript Boilerplate
+# Express TypeScript Boilerplate
 
 ### Getting started with Project
 
