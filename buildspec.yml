@@ -1,0 +1,36 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
+      - echo $ECR_URI
+      - echo $STAGE_ID
+      - echo $DOMAIN_URI 
+      - REPOSITORY_URI=$ECR_URI 
+      - S_COMMIT_ID=$(echo $COMMIT_ID | cut -c 1-7)
+      - echo $S_COMMIT_ID
+      - COMMIT_HASH=$TAG_PREFIX$S_COMMIT_ID
+      - echo $COMMIT_HASH
+      - BUILD_ID=$(echo CODEBUILD_BUILD_ID)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...        
+      - docker build -t $REPOSITORY_URI:latest --build-arg NPM_TOKEN=${NPM_TOKEN} .
+      #- docker build -t $REPOSITORY_URI:latest .
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker images....
+      - docker push $REPOSITORY_URI:latest
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - echo Writing image definitions file... 
+      - printf '[{"name":"'$STAGE_ID'","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+      - aws lambda invoke --invocation-type Event --function-name CD-CI-ECS-dev-runECSDeploymentSetUp --region ap-south-1 --log-type Tail --payload '{"service":"'$STAGE_ID'", "buildID":"'$CODEBUILD_BUILD_ID'","imageTag":"'$IMAGE_TAG'", "commitID":"'$S_COMMIT_ID'", "longCommitID":"'$COMMIT_ID'"}' outfile.txt
+artifacts:
+    files: imagedefinitions.json
