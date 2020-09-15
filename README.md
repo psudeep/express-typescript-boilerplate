@@ -1,6 +1,6 @@
-### MATOMO DASH Stats
+# Express Typescript Boilerplate
 
-# Getting started with Project
+### Getting started with Project
 
 - this project uses node version `v12.18.3`
 - `nvm use` (if the command doesn't work, install nvm)
